@@ -1,0 +1,204 @@
+<!DOCTYPE HTML>
+<html>
+
+    <head>
+        <link rel="icon" type="image/png" sizes="16x16" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAABzklEQVQ4T2OUn/2+loGRoZqR4T87AwngPwPjT4b/DK2M8nPe/yBVM8wekCGMCnPe/YcJ8LIxMpiKMzNwsjAy3Pv4l+H6u39gKSV+JgZZXiYw++jTPwx/4DoYGOAGBKmwMjjKsjJMvvCD4e33/wwOMqwMQapsDEm7voA1znXlYVh/9yfD2tu/UTwKNsBEjJmhzpKLIXjzZ4bfEEvBIE2XnWHVrV8MH37+Z+i25WLYcv8Xw8EnfzAN6LfnYjjw+DfDxnuoprMBXQ0yEORivAas9eVlqD36jeHau7844wGvAfPduBnmXvnJcOQZwnmWkiwMuiLMDC++/mPYBHQZXgMStNgYFPiYGRpOfEdxwe5gPobEnZ8ZnnwhEAZszAwMyzx5GFpOfme48Brhja0BvOBYePntP0OPHRfD5nuIQAxQZmXYcPc3Ihp5WEGhzsHwAxjJn3//ZxBkZ2RI0OZg8Fz/iYGHlZEhQ4+D4fGXvwzvfgCTD9CdUjxMDJ2nfyAMwBZ6W/x5GcK3fWb4iho5mNGIrjlag43h1Is/DKlAF5Ud/oY3h6AkZZhKGykWBg4WBoZDwETzCylhYTOJ8swEys6MwOwMTG8kZWdgNvr5H5idAaxN141QYuphAAAAAElFTkSuQmCC" />
+
+        <title>webgl shader</title>
+
+        <script id="fragmentShaderScript" type="x-shader/x-fragment">
+
+            /****FRAGMENT SHADER****/
+
+            precision mediump float;
+            uniform float uTime;
+            uniform float uWidth;
+            uniform float uHeight;
+
+            float dist(float x1, float y1, float x2, float y2) {
+                return sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+            }
+
+            vec3 plasma() {
+                float t = uTime / 1000.0;
+                float x = gl_FragCoord.x  / uWidth;
+                float y = gl_FragCoord.y  / uHeight;
+                float u = x * 8.0;
+                float v = y * 8.0;
+
+                vec2 uv = (gl_FragCoord.xy / uWidth) * ((cos(t)*.5+.5+.5)*27.0);
+                float k = cos(t * .5) * (cos(t * .1)*.5+.5) * 1.5;
+                float l = sin(t * .5) * (cos(t * .1)*.5+.5) * 1.7;
+                uv *= mat2(k,l,-l,k); // Rotate
+                u = uv.x;
+                v = uv.y;
+
+                float r = sin(sin(t) + .9 + cos(t + sin(u) + cos(v)));
+                float g = sin(t + .7 + cos(v + u));
+                float b = sin(t + .5 + cos(u) + sin(v)) * sin(u * 20.0 * sin(u + v + t)) / uWidth;
+
+                r += dist(x, y, r, g);
+                g += dist(x, y, g, r) + (sin(t / 70.0) * .5 + .5) / 10.0;
+                b += dist(x, y, r, g) + (sin(t / 170.0) * .5 + .5) / 10.0;
+
+                float value = abs(sin(r) + sin(g) + sin(b) + sin(u) + sin(v));
+
+                r /= value;
+                g /= value;
+                b /= value;
+
+                return vec3 (r, g, b);
+            }
+
+            void main() {
+
+                gl_FragColor = vec4(plasma(), 1.0);    
+
+            } 
+
+        </script>
+
+        <script id="vertexShaderScript" type="x-shader/x-vertex">
+
+            /****VERTEX SHADER****/
+
+            attribute vec3 aPos;
+
+            void main() {
+
+                gl_Position = vec4(aPos, 1.0); 
+
+            }                
+
+        </script>
+
+
+        <script type="text/javascript">
+            var gl;
+            var canvas;
+            var shaderProgram;
+            var vertexBuffer;
+
+            function loadShaders() {
+
+                // Load vertex shader
+                var vertexShaderCode = document.getElementById("vertexShaderScript").innerHTML;
+                vertexShader = gl.createShader(gl.VERTEX_SHADER);
+                gl.shaderSource(vertexShader, vertexShaderCode);
+                gl.compileShader(vertexShader);
+                if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
+                    alert(gl.getShaderInfoLog(vertexShader));
+                }
+
+                // Load fragment shader
+                var fragmentShaderCode = document.getElementById("fragmentShaderScript").innerHTML;
+                fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+                gl.shaderSource(fragmentShader, fragmentShaderCode);
+                gl.compileShader(fragmentShader);
+                if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
+                    alert(gl.getShaderInfoLog(fragmentShader));
+                }
+
+                // Link
+                shaderProgram = gl.createProgram();
+                gl.attachShader(shaderProgram, vertexShader);
+                gl.attachShader(shaderProgram, fragmentShader);
+                gl.linkProgram(shaderProgram);
+
+                if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+                    alert("Could not link shader program");
+                }
+                gl.useProgram(shaderProgram);
+
+                // Attributes and uniforms
+                shaderProgram.positionAttribute = gl.getAttribLocation(shaderProgram, "aPos");
+                shaderProgram.timeUniform = gl.getUniformLocation(shaderProgram, "uTime");
+                shaderProgram.widthUniform = gl.getUniformLocation(shaderProgram, "uWidth");
+                shaderProgram.heightUniform = gl.getUniformLocation(shaderProgram, "uHeight");
+            }
+
+            function createRenderSurface() {
+
+                var triangleVertices = [
+                    -1.0,  1.0, 0.0,
+                    -1.0, -1.0, 0.0,
+                     1.0,  1.0, 0.0,
+
+                     1.0, -1.0, 0.0,
+                    -1.0, -1.0, 0.0,
+                     1.0,  1.0, 0.0
+                ];
+
+                vertexBuffer = gl.createBuffer();
+                gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+
+                gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(triangleVertices), gl.STATIC_DRAW);
+                vertexBuffer.itemSize = 3;
+                vertexBuffer.numberOfItems = 6;
+            }
+
+            function draw(time) {
+
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                gl.viewportWidth = canvas.width;
+                gl.viewportHeight = canvas.height;
+
+                gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+                gl.clear(gl.COLOR_BUFFER_BIT);
+
+                gl.uniform1f(shaderProgram.timeUniform, time);
+                gl.uniform1f(shaderProgram.widthUniform, canvas.width);
+                gl.uniform1f(shaderProgram.heightUniform, canvas.height);
+
+                gl.vertexAttribPointer(shaderProgram.positionAttribute,
+                vertexBuffer.itemSize, gl.FLOAT, false, 0, 0);
+
+                gl.enableVertexAttribArray(shaderProgram.positionAttribute);
+
+                gl.drawArrays(gl.TRIANGLES, 0, vertexBuffer.numberOfItems);
+
+                requestAnimationFrame(draw);
+
+            }
+
+            function tryGetGlContext() {
+                var names = ["webgl", "experimental-webgl"];
+                for (var i = 0; i < names.length; i++) {
+                    try {
+                        gl = canvas.getContext(names[i]);
+                    } catch (e) { }
+                    if (gl) {
+                        break;
+                    }
+                }
+                if (gl) {
+                    gl.viewportWidth = canvas.width;
+                    gl.viewportHeight = canvas.height;
+                } else {
+                    alert("Could not get GL context");
+                }
+            }
+
+            function startup() {
+                canvas = document.getElementById("shaderCanvas");
+                tryGetGlContext();
+                loadShaders();
+                createRenderSurface();
+                gl.clearColor(0.0, 0.0, 0.0, 1.0);
+                requestAnimationFrame(draw);
+            }
+
+      </script>
+
+    </head>
+
+    <body onload="startup();">
+
+      <canvas id="shaderCanvas" width="800" height="800"></canvas>
+
+    </body>
+
+</html>
+
+
