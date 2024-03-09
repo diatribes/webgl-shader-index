@@ -26,7 +26,7 @@
                 float u = x * 8.0;
                 float v = y * 8.0;
 
-                vec2 uv = (gl_FragCoord.xy / uWidth) * ((cos(t)*.5+.5+.5)*27.0);
+                vec2 uv = (gl_FragCoord.xy / uWidth) * ((cos(t)*.5+.5+2.0)) * 30.0;
                 float k = cos(t * .5) * (cos(t * .1)*.5+.5) * 1.5;
                 float l = sin(t * .5) * (cos(t * .1)*.5+.5) * 1.7;
                 uv *= mat2(k,l,-l,k); // Rotate
@@ -37,12 +37,12 @@
                 float g = sin(t + .7 + cos(v + u));
                 float b = sin(t + .5 + cos(u) + sin(v)) * sin(u * 20.0 * sin(u + v + t)) / uWidth;
 
-                r += dist(x, y, r, g);
-                g += dist(x, y, g, r) + (sin(t / 70.0) * .5 + .5) / 10.0;
-                b += dist(x, y, r, g) + (sin(t / 170.0) * .5 + .5) / 10.0;
+                r += dist(u, v, r, g);
+                g += dist(u, v, g, r) + (sin(t / 70.0) * .5 + .5) / 10.0;
+                b += dist(u, v, r, g) + (sin(t / 170.0) * .5 + .5) / 10.0;
 
-                float value = abs(sin(r) + sin(g) + sin(b) + sin(u) + sin(v));
-
+                float value = abs(sin(r) + sin(g) + sin(b) * sin(u) * sin(v));
+                value *= ((sin(t/100.0)*.5+.5)*200.0);
                 r /= value;
                 g /= value;
                 b /= value;
